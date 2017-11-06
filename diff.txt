@@ -1,0 +1,72 @@
+diff --git a/drivers/Serial.h b/drivers/Serial.h
+index 549943a47..adf28cc48 100644
+--- a/drivers/Serial.h
++++ b/drivers/Serial.h
+@@ -98,10 +98,12 @@ public:
+     {
+         return SerialBase::writeable();
+     }
++	
++	virtual int _getc();
++    virtual int _putc(int c);
+ 
+ protected:
+-    virtual int _getc();
+-    virtual int _putc(int c);
++
+     virtual void lock();
+     virtual void unlock();
+ 
+diff --git a/targets/TARGET_ublox/TARGET_R5030/serial_api.c b/targets/TARGET_ublox/TARGET_R5030/serial_api.c
+index 6a3e09c33..941f7245a 100644
+--- a/targets/TARGET_ublox/TARGET_R5030/serial_api.c
++++ b/targets/TARGET_ublox/TARGET_R5030/serial_api.c
+@@ -343,7 +343,7 @@ void serial_baud(serial_t *obj, int baudrate)
+     //MBED_ASSERT(!((baudrate_divider_value > DRIVER_BIT_MASK(UART_BR_BAUDRATE_SIZE)) || (nco_phase_acc_value > DRIVER_BIT_MASK(UART_NCO_NCO_PHASE_SIZE))));
+ 
+     /* disable baudrate generator (uart control clear reg) */
+-    obj->reg_base->crc |= DRIVER_BITFIELD_MASK(UART_CRC_BR_EN);
++    //obj->reg_base->crc |= DRIVER_BITFIELD_MASK(UART_CRC_BR_EN);
+         
+     /* set baudrate divider value */
+ 	baudrate_divider_value--; /* the actual register value should minus 1 */
+@@ -366,7 +366,7 @@ void serial_format(serial_t *obj, int data_bits, SerialParity parity, int stop_b
+     uint32_t register_value=0;
+     
+     /* disable uart */ 
+-    register_value = (DRIVER_BITFIELD_MASK(UART_CRC_BR_EN) | DRIVER_BITFIELD_MASK(UART_CRC_RX_EN) | DRIVER_BITFIELD_MASK(UART_CRC_TX_EN));
++    register_value = (/*DRIVER_BITFIELD_MASK(UART_CRC_BR_EN) |*/ DRIVER_BITFIELD_MASK(UART_CRC_RX_EN) | DRIVER_BITFIELD_MASK(UART_CRC_TX_EN));
+     obj->reg_base->crc = register_value;
+     
+     /* read the existing value, change what is required and write once. This is done so that register access is only once not again and again */
+@@ -405,6 +405,12 @@ void serial_format(serial_t *obj, int data_bits, SerialParity parity, int stop_b
+     /* enable uart */ 
+     register_value |= (DRIVER_BITFIELD_MASK(UART_CRS_BR_EN) | DRIVER_BITFIELD_MASK(UART_CRS_RX_EN) | DRIVER_BITFIELD_MASK(UART_CRS_TX_EN));
+     
++	/* internal loopback for testing */
++	register_value = DRIVER_BITFIELD_SET(register_value, UART_CR_LOOPBACK, UART_CR_LOOPBACK_ENABLE_VALUE);
++	
++	/* remote loopback for testing */
++	//register_value = DRIVER_BITFIELD_SET(register_value, UART_CR_REMOTELOOPBACK, UART_CR_REMOTELOOPBACK_ENABLE_VALUE);
++
+     /* write final value to register */
+     obj->reg_base->cr = register_value;
+ }
+@@ -422,7 +428,7 @@ void serial_irq_handler(serial_t *obj, uart_irq_handler handler, uint32_t id)
+ void serial_irq_set(serial_t *obj, SerialIrq irq, uint32_t enable)
+ {
+     /* TODO: does uart tx/rx and baudrate generator need to be disabled? */
+-    obj->reg_base->crc = (DRIVER_BITFIELD_MASK(UART_CRC_BR_EN) | DRIVER_BITFIELD_MASK(UART_CRC_RX_EN) | DRIVER_BITFIELD_MASK(UART_CRC_TX_EN));
++    obj->reg_base->crc = (/*DRIVER_BITFIELD_MASK(UART_CRC_BR_EN) |*/ DRIVER_BITFIELD_MASK(UART_CRC_RX_EN) | DRIVER_BITFIELD_MASK(UART_CRC_TX_EN));
+ 
+     if (enable) {
+         switch (irq) {
+@@ -580,7 +586,7 @@ int serial_getc(serial_t *obj)
+     uint8_t data = 0;
+ 
+     /* Block until there is data to read */
+-    while (!serial_readable(obj)) {}        
++    while (!serial_readable(obj)) {}
+     data = (uint8_t) obj->reg_base->rhr;
+         
+     return (int)data;
