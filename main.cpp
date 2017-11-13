@@ -1,58 +1,27 @@
 #include "mbed.h"
 
-Serial pc(UART2_TX, UART2_RX);
+Serial pc(UART1_TX, UART1_RX);
+Serial dev(UART2_TX, UART2_RX);
+
+void callback1() {
+	pc._putc(pc._getc());
+}
+
+void callback2() {
+	dev._putc(dev._getc());
+}
 
 
- 
+
 int main() {
+	pc.attach(&callback1);
+	dev.attach(&callback2);
 
-	int first_char_write=0, first_char_read=0;
-	int second_char_write=0, second_char_read=0;
-
-	char write_char = '0';
+    pc.printf("Echoes back to the screen anything you type\n");
+    dev.printf("Echoes back to the screen anything you type\n");
 
 
-    while (1) {
+    while(1) {
 
-    /*	if ( test_var == 2) {
-    		break;
-    	}*/
-
-	    if(pc.writeable()) {
-	    	pc._putc(write_char);
-	    	first_char_write++;
-	    	/*pc._putc('E');
-	    	second_char_write++;*/
-	    	//pc._putc('S');
-	    }
-	    while (1)
-	    {
-			if(pc.readable()) {
-				if (pc._getc() == write_char) {
-					first_char_read++;
-				}
-			}
-			/*if(pc.readable()) {
-				if (pc._getc() == 'E') {
-					second_char_read++;
-				}
-			}*/
-			if (first_char_write == first_char_read /*&& second_char_write == second_char_read*/ )
-			{
-
-			    if(pc.writeable()) {
-			    	write_char++;
-			    	if(write_char > 'z')
-			    	{
-			    		write_char = '0';
-			    	}
-			    	pc._putc(write_char);
-			    	first_char_write++;
-			    	/*pc._putc('E');
-			    	second_char_write++;*/
-			    	//pc._putc('S');
-			    }
-			}
-	    }
     }
 }
